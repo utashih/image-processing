@@ -334,11 +334,9 @@ void Bitmap::transform(Map map, Map inv_map) {
     for (int i1 = 0; i1 < H1; i1++) {
         for (int j1 = 0; j1 < W1; j1++) {
             RGBQUAD &quad = data[i1 * W1 + j1];
-            if (get_brightness(quad) == 0) {
-                auto [j, i] = inv_map(j1 - x_offset, i1 - y_offset);
-                if (i >= 0 && i < H && j >= 0 && j < W)
-                    quad = original[i * W + j];
-            }
+            auto [j, i] = inv_map(j1 - x_offset, i1 - y_offset);
+            if (i >= 0 && i < H && j >= 0 && j < W)
+                quad = original[i * W + j];
         }
     }
 }
