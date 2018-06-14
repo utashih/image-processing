@@ -47,6 +47,11 @@ void Bitmap::set_brightness(RGBQUAD &quad, uint8_t brightness) {
     quad.rgbReserved = 0;
 }
 
+std::vector<std::pair<int, int>> Bitmap::dir4{{0, 1}, {1, 0}, {0, -1}, {-1, 0}};
+
+std::vector<std::pair<int, int>> Bitmap::dir8{
+    {0, 1}, {1, 0}, {0, -1}, {-1, 0}, {1, 1}, {1, -1}, {-1, 1}, {-1, -1}};
+
 void Bitmap::from_file(const char *filename) {
     if (initialized) {
         throw std::runtime_error("Bitmap already initialized");
@@ -295,6 +300,49 @@ void Bitmap::equalize_histogram() {
         set_brightness(quad, brightness[get_brightness(quad)]);
 }
 
+void Bitmap::transform(Map map, Map inv_map) {
+    std::vector<RGBQUAD> original(std::move(data));
+    int W = get_width();
+    int H = get_height();
+    int x_max = std::numeric_limits<int>::min(),
+        x_min = std::numeric_limits<int>::max(),
+        y_max = std::numeric_limits<int>::min(),
+        y_min = std::numeric_limits<int>::max();
+    for (int k = 0; k < 4; k++) {
+        int x = k & 1 ? W - 1 : 0;
+        int y = k & 2 ? H - 1 : 0;
+        auto [x1, y1] = map(x, y);
+        x_max = std::max(x_max, x1);
+        x_min = std::min(x_min, x1);
+        y_max = std::max(y_max, y1);
+        y_min = std::min(y_min, y1);
+    }
+    int W1 = x_max - x_min + 1;
+    int H1 = y_max - y_min + 1;
+    info_header.biWidth = W1;
+    info_header.biHeight = H1;
+    data.resize(W1 * H1);
+    int x_offset = -x_min;
+    int y_offset = -y_min;
+    /*for (int i = 0; i < H; i++) {
+        for (int j = 0; j < W; j++) {
+            RGBQUAD &quad = original[i * W + j];
+            auto [j1, i1] = map(j, i);
+            data[(i1 + y_offset) * W1 + (j1 + x_offset)] = quad;
+        }
+    }*/
+    for (int i1 = 0; i1 < H1; i1++) {
+        for (int j1 = 0; j1 < W1; j1++) {
+            RGBQUAD &quad = data[i1 * W1 + j1];
+            if (get_brightness(quad) == 0) {
+                auto [j, i] = inv_map(j1 - x_offset, i1 - y_offset);
+                if (i >= 0 && i < H && j >= 0 && j < W)
+                    quad = original[i * W + j];
+            }
+        }
+    }
+}
+
 void Bitmap::translate(const int dx, const int dy) {
     if (dx < 0 || dy < 0) {
         throw std::range_error("cannot translate with negative offset");
@@ -374,7 +422,6 @@ void Bitmap::scale(const double ratio) {
             }
         }
     }
-
     for (int i1 = 0; i1 < H1; i1++) {
         for (int j1 = 0; j1 < W1; j1++) {
             auto &quads = accumulated_data[i1 * W1 + j1];
@@ -402,15 +449,8 @@ void Bitmap::scale(const double ratio) {
 }
 
 void Bitmap::rotate(const double theta) {
-    std::vector<RGBQUAD> original(std::move(data));
-    int W = get_width();
-    int H = get_height();
     double cos_theta = std::cos(theta);
     double sin_theta = std::sin(theta);
-    int x_max = std::numeric_limits<int>::min(),
-        x_min = std::numeric_limits<int>::max(),
-        y_max = std::numeric_limits<int>::min(),
-        y_min = std::numeric_limits<int>::max();
     auto map = [=](const int x, const int y) -> std::pair<int, int> {
         int x1 = static_cast<int>(cos_theta * x - sin_theta * y);
         int y1 = static_cast<int>(sin_theta * x + cos_theta * y);
@@ -421,43 +461,31 @@ void Bitmap::rotate(const double theta) {
         int y1 = static_cast<int>(-sin_theta * x + cos_theta * y);
         return std::make_pair(x1, y1);
     };
-    for (int k = 0; k < 4; k++) {
-        int x = k & 1 ? W - 1 : 0;
-        int y = k & 2 ? H - 1 : 0;
-        auto [x1, y1] = map(x, y);
-        std::cout << "{" << x1 << ", " << y1 << "}\n";
-        x_max = std::max(x_max, x1);
-        x_min = std::min(x_min, x1);
-        y_max = std::max(y_max, y1);
-        y_min = std::min(y_min, y1);
-    }
-    int W1 = x_max - x_min + 1;
-    int H1 = y_max - y_min + 1;
-    info_header.biWidth = W1;
-    info_header.biHeight = H1;
-    data.resize(W1 * H1);
-    int x_offset = -x_min;
-    int y_offset = -y_min;
-    /*for (int i = 0; i < H; i++) {
-        for (int j = 0; j < W; j++) {
-            RGBQUAD &quad = original[i * W + j];
-            auto [j1, i1] = map(j, i);
-            data[(i1 + y_offset) * W1 + (j1 + x_offset)] = quad;
-        }
-    }*/
-    for (int i1 = 0; i1 < H1; i1++) {
-        for (int j1 = 0; j1 < W1; j1++) {
-            RGBQUAD &quad = data[i1 * W1 + j1];
-            if (get_brightness(quad) == 0) {
-                auto [j, i] = inv_map(j1 - x_offset, i1 - y_offset);
-                if (i >= 0 && i < H && j >= 0 && j < W)
-                    quad = original[i * W + j];
-            }
-        }
-    }
+    transform(map, inv_map);
 }
 
-std::vector<std::pair<int, int>> Bitmap::dir4{{0, 1}, {1, 0}, {0, -1}, {-1, 0}};
-
-std::vector<std::pair<int, int>> Bitmap::dir8{
-    {0, 1}, {1, 0}, {0, -1}, {-1, 0}, {1, 1}, {1, -1}, {-1, 1}, {-1, -1}};
+void Bitmap::shear(const Axis axis, const double ratio) {
+    if (axis == Bitmap::Axis::x_axis) {
+        auto map = [=](const int x, const int y) -> std::pair<int, int> {
+            int x1 = static_cast<int>(x + ratio * y);
+            return std::make_pair(x1, y);
+        };
+        auto inv_map = [=](const int x, const int y) -> std::pair<int, int> {
+            int x1 = static_cast<int>(x - ratio * y);
+            return std::make_pair(x1, y);
+        };
+        transform(map, inv_map);
+    } else if (axis == Bitmap::Axis::y_axis) {
+        auto map = [=](const int x, const int y) -> std::pair<int, int> {
+            int y1 = static_cast<int>(y + ratio * x);
+            return std::make_pair(x, y1);
+        };
+        auto inv_map = [=](const int x, const int y) -> std::pair<int, int> {
+            int y1 = static_cast<int>(y - ratio * x);
+            return std::make_pair(x, y1);
+        };
+        transform(map, inv_map);
+    } else {
+        throw std::runtime_error("unknown axis");
+    }
+}

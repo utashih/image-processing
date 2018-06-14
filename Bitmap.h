@@ -2,11 +2,12 @@
 #define BITMAP_H__
 
 #include "bmp.h"
+#include <functional>
 #include <vector>
-
 using std::size_t;
 
 typedef std::vector<std::pair<int, int>> StructureElement;
+typedef std::function<std::pair<int, int>(const int, const int)> Map;
 
 class Bitmap {
   public:
@@ -32,6 +33,7 @@ class Bitmap {
     void equalize_histogram();
 
     enum class Axis { x_axis, y_axis };
+    void transform(Map, Map);
     void translate(const int, const int);
     void mirror(const Axis);
     void scale(const double);

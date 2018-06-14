@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
     }
     Bitmap raw;
     raw.from_file(argv[1]);
-    /*
+
     Bitmap translated(raw);
     translated.translate(100, 200);
     translated.to_file("translated.bmp");
@@ -30,9 +30,17 @@ int main(int argc, char *argv[]) {
     Bitmap enlarged(raw);
     enlarged.scale(1.414);
     enlarged.to_file("enlarged.bmp");
-    */
+
     Bitmap rotated(raw);
     rotated.rotate(M_PI / 6);
     rotated.to_file("rotated.bmp");
+
+    Bitmap sheared_x(raw);
+    sheared_x.shear(Bitmap::Axis::x_axis, 1.0);
+    sheared_x.to_file("sheared_x.bmp");
+
+    Bitmap sheared_y(raw);
+    sheared_y.shear(Bitmap::Axis::y_axis, -0.5);
+    sheared_y.to_file("sheared_y.bmp");
     return 0;
 }
