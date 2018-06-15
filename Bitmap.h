@@ -4,7 +4,6 @@
 #include "bmp.h"
 #include <functional>
 #include <vector>
-using std::size_t;
 
 typedef std::vector<std::pair<int, int>> StructureElement;
 typedef std::function<std::pair<int, int>(const int, const int)> Map;
@@ -39,6 +38,13 @@ class Bitmap {
     void scale(const double);
     void rotate(const double);
     void shear(const Axis, const double);
+
+    class Kernel {
+      public:
+        using type = std::vector<double>;
+        static type mean;
+    };
+    void filter(const Kernel::type &);
 
   private:
     bool initialized;

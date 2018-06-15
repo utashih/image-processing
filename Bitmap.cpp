@@ -487,3 +487,13 @@ void Bitmap::shear(const Axis axis, const double ratio) {
         throw std::runtime_error("unknown axis");
     }
 }
+
+void Bitmap::filter(const Bitmap::Kernel::type &kernel) {
+    std::vector<RGBQUAD> original(std::move(data));
+    int W = get_width();
+    int H = get_height();
+    data.resize(W * H);
+    // for ()
+}
+
+Bitmap::Kernel::type Bitmap::Kernel::mean(9, 1.0);
