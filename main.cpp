@@ -11,6 +11,20 @@ int main(int argc, char *argv[]) {
     Bitmap raw;
     raw.from_file(argv[1]);
 
+    // Assignment 3
+    Bitmap grayscale(raw);
+    grayscale.grayscale();
+    grayscale.to_file("grayscale.bmp");
+
+    Bitmap logarithmic(grayscale);
+    logarithmic.logarithmic_operate();
+    logarithmic.to_file("logarithmic.bmp");
+
+    Bitmap histeq(grayscale);
+    histeq.equalize_histogram();
+    histeq.to_file("histeq.bmp");
+
+    // Assignment 4
     Bitmap translated(raw);
     translated.translate(100, 200);
     translated.to_file("translated.bmp");

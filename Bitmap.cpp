@@ -324,13 +324,6 @@ void Bitmap::transform(const Map &map, const Map &inv_map) {
     data.resize(W1 * H1);
     int x_offset = -x_min;
     int y_offset = -y_min;
-    /*for (int y = 0; y < H; y++) {
-        for (int x = 0; x < W; x++) {
-            RGBQUAD &quad = original[y * W + x];
-            auto [j1, i1] = map(j, i);
-            data[(i1 + y_offset) * W1 + (j1 + x_offset)] = quad;
-        }
-    }*/
     for (int y1 = 0; y1 < H1; y1++) {
         for (int x1 = 0; x1 < W1; x1++) {
             RGBQUAD &quad = data[y1 * W1 + x1];
@@ -395,67 +388,62 @@ void Bitmap::scale(const double ratio) {
     info_header.biWidth = W1;
     info_header.biHeight = H1;
     data.resize(W1 * H1);
-
     for (int y1 = 0; y1 < H1; y1++) {
         for (int x1 = 0; x1 < W1; x1++) {
-            double y = (y1 + 0.5) / ratio - 0.5;
-            double x = (x1 + 0.5) / ratio - 0.5;
-            int yf = static_cast<int>(std::floor(y));
-            int yc = static_cast<int>(std::ceil(y));
-            int xf = static_cast<int>(std::floor(x));
-            int xc = static_cast<int>(std::ceil(x));
+            double yd = (y1 + 0.5) / ratio - 0.5;
+            double xd = (x1 + 0.5) / ratio - 0.5;
+            int yf = static_cast<int>(std::floor(yd));
+            int yc = static_cast<int>(std::ceil(yd));
+            int xf = static_cast<int>(std::floor(xd));
+            int xc = static_cast<int>(std::ceil(xd));
+            std::vector<std::pair<RGBQUAD, double>> accumulated;
+            if (yf >= 0 && yf < H && xf >= 0 && xf < W) {
+                accumulated.push_back(std::make_pair(original[yf * W + xf],
+                                                     (xc - xd) * (yc - yd)));
+            }
+            if (yf >= 0 && yf < H && xc >= 0 && xc < W) {
+                accumulated.push_back(std::make_pair(original[yf * W + xc],
+                                                     (xd - xf) * (yc - yd)));
+            }
+            if (yc >= 0 && yc < H && xf >= 0 && xf < W) {
+                accumulated.push_back(std::make_pair(original[yc * W + xf],
+                                                     (xc - xd) * (yd - yf)));
+            }
+            if (yc >= 0 && yc < H && xc >= 0 && xc < W) {
+                accumulated.push_back(std::make_pair(original[yc * W + xc],
+                                                     (xd - xf) * (yd - yf)));
+            }
+            double Z = std::accumulate(
+                accumulated.begin(), accumulated.end(), 0.0,
+                [](const double sum, const std::pair<RGBQUAD, double> pair)
+                    -> double { return sum + pair.second; });
+            uint8_t r =
+                clamp(std::accumulate(
+                          accumulated.begin(), accumulated.end(), 0.0,
+                          [](const double sum,
+                             const std::pair<RGBQUAD, double> pair) -> double {
+                              return sum + pair.first.rgbRed * pair.second;
+                          }) /
+                      Z);
+            uint8_t g =
+                clamp(std::accumulate(
+                          accumulated.begin(), accumulated.end(), 0.0,
+                          [](const double sum,
+                             const std::pair<RGBQUAD, double> pair) -> double {
+                              return sum + pair.first.rgbGreen * pair.second;
+                          }) /
+                      Z);
+            uint8_t b =
+                clamp(std::accumulate(
+                          accumulated.begin(), accumulated.end(), 0.0,
+                          [](const double sum,
+                             const std::pair<RGBQUAD, double> pair) -> double {
+                              return sum + pair.first.rgbBlue * pair.second;
+                          }) /
+                      Z);
+            set_rgb(data[y1 * W1 + x1], r, g, b);
         }
     }
-    /*
-    std::vector<std::vector<RGBQUAD>> accumulated_data(W1 * H1);
-    for (int y = 0; y < H; y++) {
-        for (int x = 0; x < W; x++) {
-            RGBQUAD &quad = original[y * W + x];
-            int i1 = clamp(static_cast<int>(i * ratio), 0, H1 - 1);
-            int j1 = clamp(static_cast<int>(j * ratio), 0, W1 - 1);
-            accumulated_data[i1 * W1 + j1].push_back(quad);
-        }
-    }
-    for (int i1 = 0; i1 < H1; i1++) {
-        for (int j1 = 0; j1 < W1; j1++) {
-            double r = 0.0, g = 0.0, b = 0.0;
-            auto &quads = accumulated_data[i1 * W1 + j1];
-            for (auto &quad : quads) {
-                r += quad.rgbRed;
-                g += quad.rgbGreen;
-                b += quad.rgbBlue;
-            }
-            if (!quads.empty()) {
-                set_rgb(data[i1 * W1 + j1], clamp(r / quads.size()),
-                        clamp(g / quads.size()), clamp(b / quads.size()));
-            }
-        }
-    }
-    for (int i1 = 0; i1 < H1; i1++) {
-        for (int j1 = 0; j1 < W1; j1++) {
-            auto &quads = accumulated_data[i1 * W1 + j1];
-            if (!quads.empty())
-                continue;
-            for (auto [dx, dy] : Bitmap::dir8) {
-                if (i1 + dy >= 0 && i1 + dy < H1 && j1 + dx >= 0 &&
-                    j1 + dx < W1) {
-                    if (!accumulated_data[(i1 + dy) * W1 + (j1 + dx)].empty()) {
-                        quads.push_back(data[(i1 + dy) * W1 + (j1 + dx)]);
-                    }
-                }
-            }
-            double r = 0.0, g = 0.0, b = 0.0;
-            for (auto &quad : quads) {
-                r += quad.rgbRed;
-                g += quad.rgbGreen;
-                b += quad.rgbBlue;
-            }
-            set_rgb(data[i1 * W1 + j1], clamp(r / quads.size()),
-                    clamp(g / quads.size()), clamp(b / quads.size()));
-            quads.clear();
-        }
-    }
-    */
 }
 
 void Bitmap::rotate(const double theta) {
