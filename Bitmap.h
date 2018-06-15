@@ -33,7 +33,7 @@ class Bitmap {
     void equalize_histogram();
 
     enum class Axis { x_axis, y_axis };
-    void transform(Map, Map);
+    void transform(const Map &, const Map &);
     void translate(const int, const int);
     void mirror(const Axis);
     void scale(const double);

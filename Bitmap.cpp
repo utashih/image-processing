@@ -300,7 +300,7 @@ void Bitmap::equalize_histogram() {
         set_brightness(quad, brightness[get_brightness(quad)]);
 }
 
-void Bitmap::transform(Map map, Map inv_map) {
+void Bitmap::transform(const Map &map, const Map &inv_map) {
     std::vector<RGBQUAD> original(std::move(data));
     int W = get_width();
     int H = get_height();
