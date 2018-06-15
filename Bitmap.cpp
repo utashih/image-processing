@@ -70,8 +70,8 @@ void Bitmap::from_file(const char *filename) {
     int offset = (4 - (W * 3) % 4) % 4;
     size_t quadSize = info_header.biBitCount / 8;
 
-    for (int i = 0; i < H; i++) {
-        for (int j = 0; j < W; j++) {
+    for (int y = 0; y < H; y++) {
+        for (int x = 0; x < W; x++) {
             fin.read(reinterpret_cast<char *>(&temp), quadSize);
             data.push_back(temp);
         }
@@ -97,9 +97,9 @@ void Bitmap::to_file(const char *filename) {
     int offset = (4 - (W * 3) % 4) % 4;
     size_t quadSize = info_header.biBitCount / 8;
 
-    for (int i = 0; i < H; i++) {
-        for (int j = 0; j < W; j++) {
-            fout.write(reinterpret_cast<char *>(&data[i * W + j]), quadSize);
+    for (int y = 0; y < H; y++) {
+        for (int x = 0; x < W; x++) {
+            fout.write(reinterpret_cast<char *>(&data[y * W + x]), quadSize);
         }
         fout.write(alignment, offset);
         fout.flush();
@@ -226,15 +226,15 @@ void Bitmap::dilate(const StructureElement &elem) {
     int W = get_width();
     int H = get_height();
 
-    for (int i = 0; i < H; i++) {
-        for (int j = 0; j < W; j++) {
+    for (int y = 0; y < H; y++) {
+        for (int x = 0; x < W; x++) {
             bool ok = false;
             for (auto [dx, dy] : elem) {
-                if (i + dy >= 0 && i + dy < H && j + dx >= 0 && j + dx < W) {
-                    ok |= (original[(i + dy) * W + (j + dx)].rgbBlue == 255);
+                if (y + dy >= 0 && y + dy < H && x + dx >= 0 && x + dx < W) {
+                    ok |= (original[(y + dy) * W + (x + dx)].rgbBlue == 255);
                 }
             }
-            set_brightness(data[i * W + j], ok ? 255 : 0);
+            set_brightness(data[y * W + x], ok ? 255 : 0);
         }
     }
 }
@@ -249,15 +249,15 @@ void Bitmap::erode(const StructureElement &elem) {
     int W = get_width();
     int H = get_height();
 
-    for (int i = 0; i < H; i++) {
-        for (int j = 0; j < W; j++) {
+    for (int y = 0; y < H; y++) {
+        for (int x = 0; x < W; x++) {
             bool ok = true;
             for (auto [dx, dy] : elem) {
-                if (i + dy >= 0 && i + dy < H && j + dx >= 0 && j + dx < W) {
-                    ok &= (original[(i + dy) * W + (j + dx)].rgbBlue == 255);
+                if (y + dy >= 0 && y + dy < H && x + dx >= 0 && x + dx < W) {
+                    ok &= (original[(y + dy) * W + (x + dx)].rgbBlue == 255);
                 }
             }
-            set_brightness(data[i * W + j], ok ? 255 : 0);
+            set_brightness(data[y * W + x], ok ? 255 : 0);
         }
     }
 }
@@ -324,19 +324,19 @@ void Bitmap::transform(const Map &map, const Map &inv_map) {
     data.resize(W1 * H1);
     int x_offset = -x_min;
     int y_offset = -y_min;
-    /*for (int i = 0; i < H; i++) {
-        for (int j = 0; j < W; j++) {
-            RGBQUAD &quad = original[i * W + j];
+    /*for (int y = 0; y < H; y++) {
+        for (int x = 0; x < W; x++) {
+            RGBQUAD &quad = original[y * W + x];
             auto [j1, i1] = map(j, i);
             data[(i1 + y_offset) * W1 + (j1 + x_offset)] = quad;
         }
     }*/
-    for (int i1 = 0; i1 < H1; i1++) {
-        for (int j1 = 0; j1 < W1; j1++) {
-            RGBQUAD &quad = data[i1 * W1 + j1];
-            auto [j, i] = inv_map(j1 - x_offset, i1 - y_offset);
-            if (i >= 0 && i < H && j >= 0 && j < W)
-                quad = original[i * W + j];
+    for (int y1 = 0; y1 < H1; y1++) {
+        for (int x1 = 0; x1 < W1; x1++) {
+            RGBQUAD &quad = data[y1 * W1 + x1];
+            auto [x, y] = inv_map(x1 - x_offset, y1 - y_offset);
+            if (y >= 0 && y < H && x >= 0 && x < W)
+                quad = original[y * W + x];
         }
     }
 }
@@ -352,10 +352,10 @@ void Bitmap::translate(const int dx, const int dy) {
     int H1 = H + dy;
     info_header.biWidth = W1;
     info_header.biHeight = H1;
-    for (int i = 0; i < H1; i++) {
-        for (int j = 0; j < W1; j++) {
-            if (i >= dy && j >= dx) {
-                data.push_back(original[(i - dy) * W + (j - dx)]);
+    for (int y1 = 0; y1 < H1; y1++) {
+        for (int x1 = 0; x1 < W1; x1++) {
+            if (y1 >= dy && x1 >= dx) {
+                data.push_back(original[(y1 - dy) * W + (x1 - dx)]);
             } else {
                 data.push_back(RGBQUAD());
             }
@@ -367,15 +367,15 @@ void Bitmap::mirror(const Axis axis) {
     int W = get_width();
     int H = get_height();
     if (axis == Bitmap::Axis::x_axis) {
-        for (int i = 0; i < H; i++) {
-            for (int j = 0, k = W - 1; j < k; j++, k--) {
-                std::swap(data[i * W + j], data[i * W + k]);
+        for (int y = 0; y < H; y++) {
+            for (int x = 0, z = W - 1; x < z; x++, z--) {
+                std::swap(data[y * W + x], data[y * W + z]);
             }
         }
     } else if (axis == Bitmap::Axis::y_axis) {
-        for (int i = 0, k = H - 1; i < k; i++, k--) {
-            for (int j = 0; j < W; j++) {
-                std::swap(data[i * W + j], data[k * W + j]);
+        for (int y = 0, z = H - 1; y < z; y++, z--) {
+            for (int x = 0; x < W; x++) {
+                std::swap(data[y * W + x], data[z * W + x]);
             }
         }
     } else {
@@ -396,10 +396,21 @@ void Bitmap::scale(const double ratio) {
     info_header.biHeight = H1;
     data.resize(W1 * H1);
 
+    for (int y1 = 0; y1 < H1; y1++) {
+        for (int x1 = 0; x1 < W1; x1++) {
+            double y = (y1 + 0.5) / ratio - 0.5;
+            double x = (x1 + 0.5) / ratio - 0.5;
+            int yf = static_cast<int>(std::floor(y));
+            int yc = static_cast<int>(std::ceil(y));
+            int xf = static_cast<int>(std::floor(x));
+            int xc = static_cast<int>(std::ceil(x));
+        }
+    }
+    /*
     std::vector<std::vector<RGBQUAD>> accumulated_data(W1 * H1);
-    for (int i = 0; i < H; i++) {
-        for (int j = 0; j < W; j++) {
-            RGBQUAD &quad = original[i * W + j];
+    for (int y = 0; y < H; y++) {
+        for (int x = 0; x < W; x++) {
+            RGBQUAD &quad = original[y * W + x];
             int i1 = clamp(static_cast<int>(i * ratio), 0, H1 - 1);
             int j1 = clamp(static_cast<int>(j * ratio), 0, W1 - 1);
             accumulated_data[i1 * W1 + j1].push_back(quad);
@@ -444,6 +455,7 @@ void Bitmap::scale(const double ratio) {
             quads.clear();
         }
     }
+    */
 }
 
 void Bitmap::rotate(const double theta) {
