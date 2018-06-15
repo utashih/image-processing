@@ -14,6 +14,6 @@ int main(int argc, char *argv[]) {
     // Assignment 5
     Bitmap mean(raw);
     mean.filter(Bitmap::Kernel::mean);
-
+    mean.to_file("mean.bmp");
     return 0;
 }

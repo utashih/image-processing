@@ -489,11 +489,25 @@ void Bitmap::shear(const Axis axis, const double ratio) {
 }
 
 void Bitmap::filter(const Bitmap::Kernel::type &kernel) {
-    std::vector<RGBQUAD> original(std::move(data));
+    std::vector<RGBQUAD> original(data);
     int W = get_width();
     int H = get_height();
-    data.resize(W * H);
-    // for ()
+    double Z = std::accumulate(kernel.begin(), kernel.end(), 0.0);
+    for (int y = 1; y < H - 1; y++) {
+        for (int x = 1; x < W - 1; x++) {
+            double r = 0.0, g = 0.0, b = 0.0;
+            for (int dy = -1; dy <= 1; dy++) {
+                for (int dx = -1; dx <= 1; dx++) {
+                    double w = kernel[dy * 3 + dx + 4];
+                    RGBQUAD &quad = original[(y + dy) * W + (x + dx)];
+                    r += w * quad.rgbRed;
+                    g += w * quad.rgbGreen;
+                    b += w * quad.rgbBlue;
+                }
+            }
+            set_rgb(data[y * W + x], clamp(r / Z), clamp(g / Z), clamp(b / Z));
+        }
+    }
 }
 
 Bitmap::Kernel::type Bitmap::Kernel::mean(9, 1.0);
