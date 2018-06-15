@@ -13,7 +13,12 @@ int main(int argc, char *argv[]) {
 
     // Assignment 5
     Bitmap mean(raw);
-    mean.filter(Bitmap::Kernel::mean);
+    mean.mean_filter();
     mean.to_file("mean.bmp");
+
+    Bitmap laplacian(raw);
+    laplacian.laplacian_enhance();
+    laplacian.to_file("laplacian.bmp");
+
     return 0;
 }

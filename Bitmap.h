@@ -23,6 +23,7 @@ class Bitmap {
     void grayscale();
 
     void binarize(const uint8_t);
+    void otsu_binarize();
     void dilate(const StructureElement &);
     void erode(const StructureElement &);
     void open(const StructureElement &);
@@ -43,8 +44,11 @@ class Bitmap {
       public:
         using type = std::vector<double>;
         static type mean;
+        static type laplacian;
     };
     void filter(const Kernel::type &);
+    void mean_filter();
+    void laplacian_enhance();
 
   private:
     bool initialized;

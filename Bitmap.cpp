@@ -216,6 +216,8 @@ void Bitmap::binarize(const uint8_t threshold) {
     }
 }
 
+void Bitmap::otsu_binarize() { binarize(get_threshold()); }
+
 void Bitmap::dilate(const StructureElement &elem) {
     std::vector<RGBQUAD> original(data);
 
@@ -488,11 +490,14 @@ void Bitmap::shear(const Axis axis, const double ratio) {
     }
 }
 
+Bitmap::Kernel::type Bitmap::Kernel::mean(9, 1.0 / 9);
+Bitmap::Kernel::type Bitmap::Kernel::laplacian{0.0, 1.0, 0.0, 1.0, -4.0,
+                                               1.0, 0.0, 1.0, 0.0};
+
 void Bitmap::filter(const Bitmap::Kernel::type &kernel) {
     std::vector<RGBQUAD> original(data);
     int W = get_width();
     int H = get_height();
-    double Z = std::accumulate(kernel.begin(), kernel.end(), 0.0);
     for (int y = 1; y < H - 1; y++) {
         for (int x = 1; x < W - 1; x++) {
             double r = 0.0, g = 0.0, b = 0.0;
@@ -505,9 +510,29 @@ void Bitmap::filter(const Bitmap::Kernel::type &kernel) {
                     b += w * quad.rgbBlue;
                 }
             }
-            set_rgb(data[y * W + x], clamp(r / Z), clamp(g / Z), clamp(b / Z));
+            set_rgb(data[y * W + x], clamp(r), clamp(g), clamp(b));
         }
     }
 }
 
-Bitmap::Kernel::type Bitmap::Kernel::mean(9, 1.0);
+void Bitmap::mean_filter() { filter(Kernel::mean); }
+void Bitmap::laplacian_enhance() {
+    std::vector<RGBQUAD> original(data);
+    int W = get_width();
+    int H = get_height();
+
+    filter(Kernel::laplacian);
+    for (int y = 0; y < H; y++) {
+        for (int x = 0; x < W; x++) {
+            RGBQUAD &quad_origin = original[y * W + x];
+            RGBQUAD &quad_laplacian = data[y * W + x];
+            double r = static_cast<double>(quad_origin.rgbRed) -
+                       static_cast<double>(quad_laplacian.rgbRed);
+            double g = static_cast<double>(quad_origin.rgbGreen) -
+                       static_cast<double>(quad_laplacian.rgbGreen);
+            double b = static_cast<double>(quad_origin.rgbBlue) -
+                       static_cast<double>(quad_laplacian.rgbBlue);
+            set_rgb(quad_laplacian, clamp(r), clamp(g), clamp(b));
+        }
+    }
+}
