@@ -48,7 +48,7 @@ class Bitmap {
     };
     void filter(const Kernel::type &);
     void mean_filter();
-    void laplacian_enhance();
+    void laplacian_enhance(const double);
 
   private:
     bool initialized;

@@ -516,22 +516,22 @@ void Bitmap::filter(const Bitmap::Kernel::type &kernel) {
 }
 
 void Bitmap::mean_filter() { filter(Kernel::mean); }
-void Bitmap::laplacian_enhance() {
+void Bitmap::laplacian_enhance(const double ratio) {
     std::vector<RGBQUAD> original(data);
     int W = get_width();
     int H = get_height();
 
     filter(Kernel::laplacian);
-    for (int y = 0; y < H; y++) {
-        for (int x = 0; x < W; x++) {
+    for (int y = 1; y < H - 1; y++) {
+        for (int x = 1; x < W - 1; x++) {
             RGBQUAD &quad_origin = original[y * W + x];
             RGBQUAD &quad_laplacian = data[y * W + x];
             double r = static_cast<double>(quad_origin.rgbRed) -
-                       static_cast<double>(quad_laplacian.rgbRed);
+                       ratio * static_cast<double>(quad_laplacian.rgbRed);
             double g = static_cast<double>(quad_origin.rgbGreen) -
-                       static_cast<double>(quad_laplacian.rgbGreen);
+                       ratio * static_cast<double>(quad_laplacian.rgbGreen);
             double b = static_cast<double>(quad_origin.rgbBlue) -
-                       static_cast<double>(quad_laplacian.rgbBlue);
+                       ratio * static_cast<double>(quad_laplacian.rgbBlue);
             set_rgb(quad_laplacian, clamp(r), clamp(g), clamp(b));
         }
     }

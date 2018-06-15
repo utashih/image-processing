@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
     mean.to_file("mean.bmp");
 
     Bitmap laplacian(raw);
-    laplacian.laplacian_enhance();
+    laplacian.laplacian_enhance(0.5);
     laplacian.to_file("laplacian.bmp");
 
     return 0;
