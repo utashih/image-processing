@@ -50,6 +50,8 @@ class Bitmap {
     void mean_filter();
     void laplacian_enhance(const double);
 
+    void bilaterial_filter(const double, const double);
+
   private:
     bool initialized;
     BITMAPFILEHEADER file_header;
@@ -62,6 +64,7 @@ class Bitmap {
     template <typename T> static T clamp(const T value, const T lb, const T ub);
     static RGBQUAD new_RGBQUAD(const uint8_t, const uint8_t, const uint8_t);
     static std::vector<std::pair<int, int>> dir4, dir8;
+    static double gaussian(const double sigma, const double x);
 };
 
 #endif

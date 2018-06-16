@@ -498,12 +498,13 @@ void Bitmap::filter(const Bitmap::Kernel::type &kernel) {
     std::vector<RGBQUAD> original(data);
     int W = get_width();
     int H = get_height();
-    for (int y = 1; y < H - 1; y++) {
-        for (int x = 1; x < W - 1; x++) {
+    int d = static_cast<int>(std::sqrt(kernel.size())) / 2;
+    for (int y = d; y < H - d; y++) {
+        for (int x = d; x < W - d; x++) {
             double r = 0.0, g = 0.0, b = 0.0;
-            for (int dy = -1; dy <= 1; dy++) {
-                for (int dx = -1; dx <= 1; dx++) {
-                    double w = kernel[dy * 3 + dx + 4];
+            for (int dy = -d; dy <= d; dy++) {
+                for (int dx = -d; dx <= d; dx++) {
+                    double w = kernel[(dy + d) * (2 * d + 1) + (dx + d)];
                     RGBQUAD &quad = original[(y + dy) * W + (x + dx)];
                     r += w * quad.rgbRed;
                     g += w * quad.rgbGreen;
@@ -532,6 +533,42 @@ void Bitmap::laplacian_enhance(const double ratio) {
                        ratio * static_cast<double>(quad_laplacian.rgbGreen);
             double b = static_cast<double>(quad_origin.rgbBlue) -
                        ratio * static_cast<double>(quad_laplacian.rgbBlue);
+            set_rgb(quad_laplacian, clamp(r), clamp(g), clamp(b));
+        }
+    }
+}
+
+double Bitmap::gaussian(const double sigma, const double x) {
+    const double Z = sigma * std::sqrt(2 * M_PI);
+    return std::exp(-std::pow(x / sigma, 2) / 2) / Z;
+}
+
+void Bitmap::bilaterial_filter(const double sigma_s, const double sigma_r) {
+    if (sigma_s < 0.0 || sigma_r < 0.0) {
+        throw std::range_error(
+            "cannot use bilateral filter with negative parameters");
+    }
+    std::vector<RGBQUAD> original(data);
+    int W = get_width();
+    int H = get_height();
+    int r = static_cast<int>(sigma_s);
+    std::vector<double> gaussian_weights((2 * r + 1) * (2 * r + 1));
+    for (int y = -r; y <= r; y++) {
+        for (int x = -r; x <= r; x++) {
+            gaussian_weights[(y + r) * (2 * r + 1) + (x + r)] =
+                gaussian(sigma_s, std::sqrt(x * x + y * y));
+        }
+    }
+    for (int y = 0; y < H; y++) {
+        for (int x = 0; x < W; x++) {
+            RGBQUAD &quad_origin = original[y * W + x];
+            RGBQUAD &quad_laplacian = data[y * W + x];
+            double r = static_cast<double>(quad_origin.rgbRed) -
+                       static_cast<double>(quad_laplacian.rgbRed);
+            double g = static_cast<double>(quad_origin.rgbGreen) -
+                       static_cast<double>(quad_laplacian.rgbGreen);
+            double b = static_cast<double>(quad_origin.rgbBlue) -
+                       static_cast<double>(quad_laplacian.rgbBlue);
             set_rgb(quad_laplacian, clamp(r), clamp(g), clamp(b));
         }
     }

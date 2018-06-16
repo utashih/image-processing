@@ -11,14 +11,10 @@ int main(int argc, char *argv[]) {
     Bitmap raw;
     raw.from_file(argv[1]);
 
-    // Assignment 5
-    Bitmap mean(raw);
-    mean.mean_filter();
-    mean.to_file("mean.bmp");
-
-    Bitmap laplacian(raw);
-    laplacian.laplacian_enhance(0.5);
-    laplacian.to_file("laplacian.bmp");
+    // Assignment 6
+    Bitmap bilateral(raw);
+    bilateral.bilaterial_filter(12, 0.2);
+    bilateral.to_file("bilateral.bmp");
 
     return 0;
 }
