@@ -551,25 +551,46 @@ void Bitmap::bilaterial_filter(const double sigma_s, const double sigma_r) {
     std::vector<RGBQUAD> original(data);
     int W = get_width();
     int H = get_height();
-    int r = static_cast<int>(sigma_s);
-    std::vector<double> gaussian_weights((2 * r + 1) * (2 * r + 1));
-    for (int y = -r; y <= r; y++) {
-        for (int x = -r; x <= r; x++) {
-            gaussian_weights[(y + r) * (2 * r + 1) + (x + r)] =
-                gaussian(sigma_s, std::sqrt(x * x + y * y));
+    int d = static_cast<int>(sigma_s);
+    Kernel::type gaussian_weights((2 * d + 1) * (2 * d + 1));
+    for (int dy = -d; dy <= d; dy++) {
+        for (int dx = -d; dx <= d; dx++) {
+            gaussian_weights[(dy + d) * (2 * d + 1) + (dx + d)] =
+                gaussian(sigma_s, std::sqrt(dx * dx + dy * dy));
         }
     }
-    for (int y = 0; y < H; y++) {
-        for (int x = 0; x < W; x++) {
-            RGBQUAD &quad_origin = original[y * W + x];
-            RGBQUAD &quad_laplacian = data[y * W + x];
-            double r = static_cast<double>(quad_origin.rgbRed) -
-                       static_cast<double>(quad_laplacian.rgbRed);
-            double g = static_cast<double>(quad_origin.rgbGreen) -
-                       static_cast<double>(quad_laplacian.rgbGreen);
-            double b = static_cast<double>(quad_origin.rgbBlue) -
-                       static_cast<double>(quad_laplacian.rgbBlue);
-            set_rgb(quad_laplacian, clamp(r), clamp(g), clamp(b));
+    auto color_dist = [](const RGBQUAD &lhs, const RGBQUAD &rhs) -> double {
+        double dr =
+            static_cast<double>(lhs.rgbRed) - static_cast<double>(rhs.rgbRed);
+        double dg = static_cast<double>(lhs.rgbGreen) -
+                    static_cast<double>(rhs.rgbGreen);
+        double db =
+            static_cast<double>(lhs.rgbBlue) - static_cast<double>(rhs.rgbBlue);
+        return std::sqrt(dr * dr + dg * dg + db * db);
+    };
+    for (int y = d; y < H - d; y++) {
+        for (int x = d; x < W - d; x++) {
+            Kernel::type kernel(gaussian_weights);
+            for (int dy = -d; dy <= d; dy++) {
+                for (int dx = -d; dx <= d; dx++) {
+                    double dc = color_dist(original[y * W + x],
+                                           original[(y + dy) * W + (x + dx)]);
+                    kernel[(dy + d) * (2 * d + 1) + (dx + d)] *=
+                        gaussian(sigma_r, dc);
+                }
+            }
+            double Z = std::accumulate(kernel.begin(), kernel.end(), 0.0);
+            double r = 0.0, g = 0.0, b = 0.0;
+            for (int dy = -d; dy <= d; dy++) {
+                for (int dx = -d; dx <= d; dx++) {
+                    double w = kernel[(dy + d) * (2 * d + 1) + (dx + d)] / Z;
+                    RGBQUAD &quad = original[(y + dy) * W + (x + dx)];
+                    r += w * quad.rgbRed;
+                    g += w * quad.rgbGreen;
+                    b += w * quad.rgbBlue;
+                }
+            }
+            set_rgb(data[y * W + x], clamp(r), clamp(g), clamp(b));
         }
     }
 }

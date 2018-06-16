@@ -1,6 +1,7 @@
 #include "Bitmap.h"
 #include <cmath>
 #include <iostream>
+#include <limits>
 #include <vector>
 
 int main(int argc, char *argv[]) {
@@ -13,7 +14,7 @@ int main(int argc, char *argv[]) {
 
     // Assignment 6
     Bitmap bilateral(raw);
-    bilateral.bilaterial_filter(12, 0.2);
+    bilateral.bilaterial_filter(12, 100000);
     bilateral.to_file("bilateral.bmp");
 
     return 0;
